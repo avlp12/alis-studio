@@ -8,6 +8,14 @@ The first model it ships with is **[Krea 2 Turbo](https://github.com/avlp12/krea
 (a 12.9B text-to-image model, pure-MLX). Other models plug in as small backends — see
 [Adding a model](#adding-a-model).
 
+![Alis Studio](assets/screenshot.png)
+
+> Everything in one place: **pick or download a model**, then set resolution + aspect ratio, steps,
+> seed, and more in the model-adaptive settings panel. Light and dark follow your system.
+
+<p align="center"><img src="assets/sample.png" width="420" alt="Sample output"><br>
+<sub><i>Generated locally by Krea 2 Turbo (8-bit, 1024², 8-step Turbo).</i></sub></p>
+
 ---
 
 ## Quickstart
