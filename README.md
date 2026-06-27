@@ -8,13 +8,11 @@ Ships with **[Krea 2 Turbo](https://github.com/avlp12/krea2_alis_mlx)** (pure-ML
 **Qwen-Image** and **FLUX.1** (schnell / dev) via [mflux](https://github.com/filipstrand/mflux).
 More models plug in as small backends — see [Adding a model](#adding-a-model).
 
-![Alis Studio](assets/screenshot.png)
+![Alis Studio — a real generation in the app](assets/screenshot.png)
 
-> Everything in one place: **pick or download a model**, then set resolution + aspect ratio, steps,
-> seed, and more in the model-adaptive settings panel. Light and dark follow your system.
-
-<p align="center"><img src="assets/sample.png" width="420" alt="Sample output"><br>
-<sub><i>Generated locally by Krea 2 Turbo (8-bit, 1024², 8-step Turbo).</i></sub></p>
+> A real run in the app: pick a model, set resolution + aspect ratio, steps, seed, and more in the
+> model-adaptive settings panel, then Generate. (Shown: Krea 2 Turbo 8-bit, 1024², 8-step Turbo.)
+> Light and dark follow your system.
 
 ---
 
