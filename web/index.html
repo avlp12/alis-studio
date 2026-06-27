@@ -63,20 +63,26 @@ input[type=range]{width:100%;accent-color:var(--clay)}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
 textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-height:1.4}
 .disabled{opacity:.5;pointer-events:none}
-.mhdr{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text);margin:11px 0 7px;cursor:pointer;user-select:none}
-.mhdr:hover{color:var(--clay)}
-.mhdr .chev{display:inline-flex;color:var(--muted);transition:transform .15s}
-.mhdr .chev svg{width:14px;height:14px}
-.mhdr .chev.open{transform:rotate(90deg)}
-.mhdr .hact{color:var(--clay);font-weight:400;font-size:11px;margin-left:1px}
-#modelGroup .mhdr:first-of-type{margin-top:4px}
-.mrow{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0.5px solid var(--border);border-radius:10px;background:var(--surface-2);margin-bottom:7px;flex-wrap:wrap}
-.mrow.active{border-color:var(--clay)}
-.mic{width:30px;height:30px;border-radius:7px;background:var(--surface-1);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex:none}.mic svg{width:16px;height:16px}
-.mname{font-size:13px;font-weight:500}.msub{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.mtag{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--clay)}.mtag .dot{width:6px;height:6px;border-radius:50%;background:var(--clay)}
-.mbtn{height:28px;padding:0 11px;border:0.5px solid var(--border-strong);border-radius:8px;background:var(--surface);font-size:12px;color:var(--text);display:inline-flex;align-items:center;gap:5px}.mbtn:hover{background:var(--surface-1)}.mbtn:disabled{opacity:.6}.mbtn svg{width:13px;height:13px}
-.mdel{width:28px;height:28px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;flex:none}.mdel:hover{border-color:var(--border-strong)}.mdel svg{width:14px;height:14px}
+.picker{position:relative}
+.mpick{width:100%;height:46px;border:0.5px solid var(--border-strong);border-radius:10px;background:var(--surface-2);padding:0 11px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text);font:inherit}
+.mpick:hover{background:var(--surface-1)}
+.mpico{width:28px;height:28px;border-radius:7px;background:var(--surface-1);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex:none}.mpico svg{width:16px;height:16px}
+.mptxt{min-width:0;flex:1;text-align:left;line-height:1.25}
+.mpn{display:block;font-size:13px;font-weight:500}
+.mpv{display:block;font-size:11px;color:var(--muted);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mpchev{color:var(--muted);display:inline-flex;flex:none}.mpchev svg{width:17px;height:17px}
+.mpop{display:none;position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:30;max-height:330px;overflow:auto;background:var(--surface-2);border:0.5px solid var(--border-strong);border-radius:12px;padding:5px;box-shadow:0 10px 30px rgba(20,18,16,.18)}
+.mpop.open{display:block}
+.mpg{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:8px 9px 4px}
+.mpr{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;flex-wrap:wrap}
+.mpr:hover{background:var(--surface-1)}
+.mpr.on{background:rgba(196,98,63,.10)}
+.mpri{width:26px;height:26px;border-radius:6px;background:var(--surface-1);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex:none}.mpri svg{width:15px;height:15px}
+.mprt{min-width:0;flex:1;line-height:1.25}
+.mprn{display:block;font-size:13px;color:var(--text)}
+.mprs{display:block;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.mpra{display:inline-flex;align-items:center;gap:7px;color:var(--text-2);flex:none}.mpra svg{width:16px;height:16px}.mpra .ok{color:var(--clay);display:inline-flex}
+.mpdel{display:inline-flex;color:var(--muted);cursor:pointer}.mpdel:hover{color:var(--text)}.mpdel svg{width:15px;height:15px}
 .mprog{height:4px;border-radius:2px;background:var(--surface-1);overflow:hidden;margin-top:8px;flex-basis:100%}.mprog i{display:block;height:100%;width:0;background:var(--clay);border-radius:2px;transition:width .3s}
 .progress{display:none;margin:8px 0 2px}.progress.show{display:block}
 .bar{height:4px;border-radius:2px;background:var(--surface-1);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--clay);border-radius:2px;transition:width .25s}
@@ -130,6 +136,11 @@ const progress=$("#progress"),barfill=$("#barfill"),pstep=$("#pstep"),ptime=$("#
 const modelGroup=$("#modelGroup"),paramGroups=$("#paramGroups"),activeName=$("#activeName"),safetyBtn=$("#safety");
 let BACKENDS=[],CATALOG={backends:[],disk_gb:0},PV={},current="",safetyOn=true,busy=false,t0=0,timer=null;
 const SVG_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+const SVG_CUBE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>';
+const SVG_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+const SVG_DLI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>';
+const SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+const SVG_CHEVD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const fmt=n=>(Math.round(n*10)/10).toFixed(1);
 const showErr=m=>{errBox.textContent=m;errBox.classList.add("show");};
 const m16=(x,min,max)=>Math.max(min,Math.min(max,Math.round(x/16)*16));
@@ -140,6 +151,7 @@ prompt.addEventListener("input",()=>{prompt.style.height="auto";prompt.style.hei
 prompt.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="Enter")generate();});
 safetyBtn.addEventListener("click",()=>{safetyOn=!safetyOn;safetyBtn.classList.toggle("on",safetyOn);safetyBtn.title="NSFW safety filter: "+(safetyOn?"on":"off");});
 gen.addEventListener("click",generate);
+document.addEventListener("click",e=>{if(POPEN&&!e.target.closest(".picker")){POPEN=false;const p=document.querySelector(".mpop");if(p)p.classList.remove("open");}});
 
 async function loadAll(){
   try{
@@ -153,7 +165,7 @@ async function loadAll(){
   }catch(e){showErr("Couldn’t reach the server: "+e.message);}
 }
 let DOWNLOADING=false;
-const EXPANDED=new Set();   // which model groups are expanded in the Model section
+let POPEN=false;   // is the model picker popover open
 // the authoritative build list is /api/models variants, enriched with /api/catalog (size + install
 // state). a variant with no catalog entry is a local/non-downloadable model: always usable, no buttons.
 function allBuilds(){
@@ -169,7 +181,6 @@ const buildOf=model=>allBuilds().find(b=>b.backend+":"+b.variant===model);
 function setActive(model,initial){
   const changedBackend=backendOf(model)!==backendOf(current);
   current=model;
-  EXPANDED.add(model.split(":")[0]);   // keep the active model's group open
   const b=backendOf(model),bld=buildOf(model);
   activeName.textContent=b.label+" · "+(bld?bld.label.split(" · ")[0]:model.split(":")[1]);
   if(initial||changedBackend)renderParams(b);
@@ -187,40 +198,30 @@ function reconcile(){
 function renderModelGroup(){
   modelGroup.innerHTML="";
   const head=el("div","sgrp","Model");head.appendChild(el("span","disk",(CATALOG.disk_gb||0)+" GB"));modelGroup.appendChild(head);
+  const wrap=el("div","picker"),cur=buildOf(current);
+  const btn=el("button","mpick",'<span class="mpico">'+SVG_CUBE+'</span><span class="mptxt"><span class="mpn">'+(cur?cur.blabel:"Select a model")+'</span><span class="mpv">'+(cur?cur.label:"")+'</span></span><span class="mpchev">'+SVG_CHEVD+'</span>');
+  btn.setAttribute("aria-label","Choose model");btn.setAttribute("aria-expanded",POPEN?"true":"false");
+  const pop=el("div","mpop"+(POPEN?" open":""));
   const builds=allBuilds(),byB={};
-  builds.forEach(b=>(byB[b.backend]=byB[b.backend]||[]).push(b));   // one collapsible group per model
-  Object.entries(byB).forEach(([bid,grp])=>{
-    const open=EXPANDED.has(bid),active=grp.some(b=>b.backend+":"+b.variant===current);
-    const chev='<span class="chev'+(open?" open":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
-    const hdr=el("div","mhdr",chev+grp[0].blabel+((active&&!open)?' <span class="hact">· active</span>':''));
-    hdr.onclick=()=>{open?EXPANDED.delete(bid):EXPANDED.add(bid);renderModelGroup();};
-    modelGroup.appendChild(hdr);
-    if(open)grp.forEach(b=>modelGroup.appendChild(modelRow(b)));
-  });
+  builds.forEach(b=>(byB[b.backend]=byB[b.backend]||[]).push(b));   // group builds under each model in the popover
+  Object.entries(byB).forEach(([bid,grp])=>{pop.appendChild(el("div","mpg",grp[0].blabel));grp.forEach(b=>pop.appendChild(popRow(b)));});
+  btn.onclick=e=>{e.stopPropagation();POPEN=!POPEN;pop.classList.toggle("open",POPEN);btn.setAttribute("aria-expanded",POPEN?"true":"false");};
+  wrap.appendChild(btn);wrap.appendChild(pop);modelGroup.appendChild(wrap);
 }
 
-function modelRow(b){
+function popRow(b){
   const id=b.backend+":"+b.variant,active=(id===current);
-  const r=el("div","mrow"+(active?" active":""));
-  r.appendChild(el("span","mic",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>'));
-  const sub=b.downloadable?(b.size_gb+" GB · "+(b.note||"")):(b.note||"local model");
-  const info=el("div",null,'<div class="mname">'+b.label+'</div><div class="msub">'+sub+'</div>');info.style.cssText="min-width:0;flex:1";r.appendChild(info);
-  const right=el("div");right.style.cssText="display:flex;align-items:center;gap:7px";
-  if(b.downloadable&&!b.installed){
-    const dl=el("button","mbtn",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download');
-    dl.setAttribute("aria-label","Download "+b.label);dl.onclick=()=>dlVariant(b,r,dl);right.appendChild(dl);
-  }else if(active){
-    right.appendChild(el("span","mtag",'<span class="dot"></span>Active'));
-    if(b.downloadable)right.appendChild(delBtn(b));
-  }else{
-    const use=el("button","mbtn",null);use.textContent="Use";use.setAttribute("aria-label","Use "+b.label);use.onclick=()=>setActive(id);right.appendChild(use);
-    if(b.downloadable)right.appendChild(delBtn(b));
-  }
-  r.appendChild(right);return r;
-}
-function delBtn(b){
-  const d=el("button","mdel",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>');
-  d.title="Delete "+b.label;d.setAttribute("aria-label","Delete "+b.label);d.onclick=()=>delVariant(b);return d;
+  const r=el("div","mpr"+(active?" on":""));
+  const sub=b.downloadable?((b.size_gb?b.size_gb+" GB":"")+(b.note?" · "+b.note:"")):(b.note||"");
+  r.innerHTML='<span class="mpri">'+SVG_CUBE+'</span><span class="mprt"><span class="mprn">'+b.label+'</span>'+(sub?'<span class="mprs">'+sub+'</span>':'')+'</span>';
+  const act=el("span","mpra");
+  if(active)act.innerHTML='<span class="ok">'+SVG_CHECK+'</span>';
+  else if(b.downloadable&&!b.installed)act.innerHTML=SVG_DLI;
+  if(b.downloadable&&b.installed){const d=el("span","mpdel",SVG_TRASH);d.title="Delete "+b.label;d.setAttribute("aria-label","Delete "+b.label);d.onclick=e=>{e.stopPropagation();delVariant(b);};act.appendChild(d);}
+  r.appendChild(act);
+  r.setAttribute("aria-label",b.blabel+" · "+b.label);
+  r.onclick=()=>{if(b.downloadable&&!b.installed)dlVariant(b,r,act);else{POPEN=false;setActive(id);}};
+  return r;
 }
 
 async function dlVariant(b,r,btn){
