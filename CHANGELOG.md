@@ -8,6 +8,17 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.5.2] — 2026-06-28
+
+### Fixed
+- **Image generation crashed with `There is no Stream(gpu, 0) in current thread`** — on recent MLX
+  this hit every generation through the app (and always after using the prompt enhancer), making
+  0.5.0–0.5.1 unable to generate. MLX keeps its default GPU stream per-thread, but the stdlib
+  threaded server ran model work on whichever request thread arrived, and the enhancer's mlx-lm
+  corrupted that state further. Fix: all MLX work (generation, NSFW filter, model-cache scan, and
+  registry build) now runs on a single dedicated GPU thread warmed up at startup, and the prompt
+  enhancer's mlx-lm runs in its own isolated subprocess so it can't touch the image model's GPU state.
+
 ## [0.5.1] — 2026-06-28
 
 ### Added
@@ -69,6 +80,7 @@ web UI, and the DMG build stamps it into the app bundle.
 - Initial release: a local, model-agnostic, standard-library image-generation studio for
   Apple silicon (MLX), with the pure-MLX Krea 2 Turbo backend.
 
+[0.5.2]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.2
 [0.5.1]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.1
 [0.5.0]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.0
 [0.4.0]: https://github.com/avlp12/alis-studio/releases/tag/v0.4.0

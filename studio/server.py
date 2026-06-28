@@ -8,6 +8,7 @@ models at /api/models, and streams generation progress as NDJSON from /api/gener
 from __future__ import annotations
 
 import base64
+import concurrent.futures
 import io
 import json
 import os
@@ -29,6 +30,24 @@ _REGISTRY: Registry | None = None
 _LOCK = threading.Lock()    # one GPU — serialize generation
 _DLLOCK = threading.Lock()  # serialize downloads (shared .part files)
 _CANCEL = threading.Event()  # set by POST /api/cancel — the in-flight generation stops at its next step
+
+# MLX's default GPU stream is per-thread with a global index, and krea2 hard-references stream
+# index 0. The stdlib ThreadingHTTPServer hands each request a fresh thread, so generation on a
+# request thread otherwise dies with "There is no Stream(gpu, 0) in current thread". Fix: run
+# EVERY MLX op (generation, NSFW filter, the model-cache scan) on ONE dedicated thread, and warm
+# that thread up FIRST (in start_http, before anything else imports mlx) so it claims index 0.
+# (The prompt enhancer's mlx-lm runs in a separate process entirely — see studio/prompt_rewrite.py.)
+_GPU = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="alis-gpu")
+
+
+def _gpu(fn, *args, **kwargs):
+    """Run an MLX-touching callable on the one GPU thread and return its result."""
+    return _GPU.submit(fn, *args, **kwargs).result()
+
+
+def _warmup_gpu():
+    import mlx.core as mx
+    mx.eval(mx.zeros(1))   # claim GPU stream 0 for this thread before any other import touches mlx
 
 
 class _Cancelled(Exception):
@@ -111,7 +130,7 @@ def _catalog() -> dict:
         if entries:
             backs.append({"id": b.id, "label": b.label, "entries": entries})
     try:
-        disk = _disk_gb()
+        disk = _gpu(_disk_gb)   # imports krea2.pipeline (touches mlx) — keep it on the GPU thread
     except Exception:
         disk = 0.0
     return {"disk_gb": disk, "backends": backs}
@@ -210,13 +229,15 @@ class Handler(BaseHTTPRequestHandler):
                 h = int(params.get("height") or params.get("size") or 1024)
                 params["width"], params["height"] = w, h
                 t0 = time.time()
-                imgs = backend.generate(
-                    prompt=str(req.get("prompt", "")), variant=variant, params=params,
-                    step_callback=step,
-                )
-                if _CANCEL.is_set():  # stopped after the last step, or by a backend that doesn't tick
-                    raise _Cancelled()
-                imgs, flagged = _apply_safety(imgs, req.get("safety", True))
+
+                def _job():           # all MLX work (load, denoise, NSFW filter) on the one GPU thread
+                    out = backend.generate(prompt=str(req.get("prompt", "")), variant=variant,
+                                           params=params, step_callback=step)
+                    if _CANCEL.is_set():  # stopped after the last step, or by a backend that doesn't tick
+                        raise _Cancelled()
+                    return _apply_safety(out, req.get("safety", True))
+
+                imgs, flagged = _gpu(_job)
                 emit({"type": "done", "flagged": flagged,
                       "images": [_png_datauri(im) for im in imgs],
                       "meta": {"model": backend.label, "width": w, "height": h,
@@ -247,7 +268,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         with _LOCK:   # one GPU — don't enhance while a generation is running (first call also loads ~2.3 GB)
             try:
-                rewritten = prompt_rewrite.enhance(prompt)
+                rewritten = prompt_rewrite.enhance(prompt)   # runs in an isolated worker process (own MLX state)
                 self._send(200, "application/json", json.dumps({"rewritten": rewritten}).encode())
             except RuntimeError as e:   # mlx-lm not installed
                 self._send(503, "application/json", json.dumps({"error": str(e)}).encode())
@@ -290,7 +311,9 @@ class Handler(BaseHTTPRequestHandler):
 def start_http(host=HOST, port=PORT):
     """Build the registry and run the HTTP server in a background daemon thread.
     Returns (server, bound_port). Pass port=0 to bind a free port (the native window does this)."""
-    _registry()  # build up front so /api/models is ready and startup fails loudly
+    _gpu(_warmup_gpu)   # claim a GPU stream on our dedicated thread first
+    _gpu(_registry)     # build the registry (imports mflux/krea2 → mlx) on that SAME thread, so every
+                        # mlx import and op shares one thread's stream; also makes startup fail loudly
     server = ThreadingHTTPServer((host, port), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, server.server_address[1]
