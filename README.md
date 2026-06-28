@@ -4,9 +4,12 @@ A local, **model-agnostic** image-generation studio for **Apple silicon** — a 
 web UI that runs text-to-image models entirely on your Mac with [MLX](https://github.com/ml-explore/mlx).
 No cloud, no accounts, your images never leave your machine.
 
-Ships with **[Krea 2 Turbo](https://github.com/avlp12/krea2_alis_mlx)** (pure-MLX), plus
-**Qwen-Image** and **FLUX.1** (schnell / dev) via [mflux](https://github.com/filipstrand/mflux).
-More models plug in as small backends — see [Adding a model](#adding-a-model).
+Ships with **[Krea 2 Turbo](https://github.com/avlp12/krea2_alis_mlx)** (pure-MLX) and
+**[Z-Image Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo)** (Apache-2.0 — a fast 6B model
+that **runs on a 16 GB Mac**), plus **Qwen-Image** and **FLUX.1** (schnell / dev) via
+[mflux](https://github.com/filipstrand/mflux). On launch it **detects your Mac's memory and
+recommends the model that fits best**. More models plug in as small backends — see
+[Adding a model](#adding-a-model).
 
 ![Alis Studio — a real generation in the app](assets/screenshot.png)
 
@@ -18,7 +21,9 @@ More models plug in as small backends — see [Adding a model](#adding-a-model).
 
 ## Quickstart
 
-**Requires an Apple-silicon Mac (M1+) with ≥ 24 GB unified memory.** On macOS use `python3`.
+**Requires an Apple-silicon Mac (M1+).** **Z-Image Turbo** runs on **16 GB**; the 12.9B
+**Krea 2 Turbo** wants **≥ 24 GB**. Alis Studio detects your unified memory and recommends a model
+on launch. On macOS use `python3`.
 
 ```bash
 git clone https://github.com/avlp12/alis-studio.git
@@ -68,7 +73,12 @@ too large to ship inside a DMG.
   model exposes exactly the controls it supports; the panel renders itself from the backend.
 - **Model picker** — the **Model** control in Settings opens a popover grouping every model and
   build; switch with a click, **download** (live progress) or delete weights inline, see disk usage.
-- **Live progress** — a per-step bar as the model denoises. **Light + dark** follow your system.
+  The model that best fits your Mac's memory is marked **★ Recommended** and selected by default.
+- **Live progress + Stop** — a per-step bar as the model denoises (cumulative across a multi-image
+  batch); **Stop** interrupts mid-generation. **Light + dark** follow your system.
+- **Low-memory rendering** — on **≤ 24 GB** Macs, large (≥ 1024²) renders use mflux's VAE tiling so
+  they fit (Z-Image 1024² peak ~12.9 → ~8.5 GB, no visible quality change); bigger Macs and smaller
+  renders keep the exact decode. Override with `ALIS_VAE_TILING=1`/`0`.
 - **NSFW safety filter** runs by default (pure-MLX, no PyTorch); toggle it with the shield icon.
 - Bind to your LAN with `ALIS_HOST=0.0.0.0 python3 app.py` (only on networks you trust); change
   the port with `ALIS_PORT=7861`.
@@ -84,7 +94,8 @@ downloads inline, and the previous build is freed when you switch (two big model
 
 | Model | Builds | Download |
 |---|---|---|
-| **Krea 2 Turbo** | 8-bit (14.2 GB) · mixed-4/8 (9.8 GB). 8-step Turbo. | managed in-app (resumable, with progress) |
+| **Krea 2 Turbo** | 8-bit (14.2 GB) · mixed-4/8 (9.8 GB). 8-step Turbo. Wants ≥ 24 GB RAM. | managed in-app (resumable, with progress) |
+| **Z-Image Turbo** | 4-bit (~6 GB) · 8-bit · bf16. 9-step Turbo, Apache-2.0. **Runs on 16 GB**; multilingual (Qwen3 encoder). | auto on first use via mflux |
 | **Qwen-Image** | 8/4-bit, bf16. Apache-2.0, open. | auto on first use via mflux (~40 GB) |
 | **FLUX.1 schnell** | 8/4-bit, bf16. Apache-2.0 weights, **gated repo**. | auto on first use via mflux (~24 GB) |
 | **FLUX.1 dev** | 8/4-bit, bf16. Non-commercial, **gated**. | auto on first use via mflux (~24 GB) |

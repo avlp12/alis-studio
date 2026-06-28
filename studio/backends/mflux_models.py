@@ -35,6 +35,7 @@ def _flux_params(*, default_steps, max_steps, guidance_default, guidance_fixed, 
 
 class _MfluxFlux(Backend):
     """Shared FLUX-family backend (txt2img via mflux's Flux1)."""
+    min_ram_gib = 24   # 12B; ~24 GB on first use
     prompt_note = "Works best with English prompts — its T5/CLIP text encoder is English-centric."
     mflux_name = ""   # mflux model alias: "schnell" / "dev"
     repo = ""         # HF repo, for the gated-access message
@@ -117,6 +118,7 @@ class QwenImageBackend(Backend):
     """Qwen-Image (open, Apache-2.0) via mflux — downloads on first use, no HF gating."""
     id = "qwen-image"
     label = "Qwen-Image"
+    min_ram_gib = 32   # ~20B; large (~40 GB at 8-bit) → wants a roomy Mac
     prompt_note = "Understands Korean and other languages natively (Qwen2.5 text encoder)."
     info = "Apache-2.0 (open) · large (~40 GB), downloads on first use via mflux"
     variants = [{"id": "8bit", "label": "8-bit"}, {"id": "4bit", "label": "4-bit"}, {"id": "bf16", "label": "bf16"}]

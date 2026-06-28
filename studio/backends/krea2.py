@@ -12,6 +12,7 @@ from .base import Backend
 
 
 class Krea2Backend(Backend):
+    min_ram_gib = 24   # 12.9B DiT; mixed-4/8 ~9.8 GB + activations → wants ≥24 GB
     id = "krea2-turbo"
     label = "Krea 2 Turbo"
     prompt_note = "Understands Korean and other languages natively (Qwen3 text encoder)."

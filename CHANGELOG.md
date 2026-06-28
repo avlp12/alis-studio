@@ -8,6 +8,17 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.6.2] — 2026-06-29
+
+### Added
+- **Recommended model for your Mac.** On launch, Alis Studio detects your unified memory and marks
+  the best-fitting model **★ Recommended** in the picker — and selects it by default: **Z-Image Turbo**
+  on a 16 GB Mac, **Krea 2 Turbo** on ≥ 24 GB. Each backend declares a `min_ram_gib` floor and
+  `/api/system` now returns `recommended` / `recommended_label`.
+
+### Changed
+- README updated for Z-Image Turbo, 16 GB-Mac support, the low-memory tiling, and the recommendation.
+
 ## [0.6.1] — 2026-06-29
 
 ### Added
