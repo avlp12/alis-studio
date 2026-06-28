@@ -16,7 +16,7 @@ builds quantize on the fly from the official ``Tongyi-MAI/Z-Image-Turbo`` repo (
 from __future__ import annotations
 
 from .base import Backend
-from .mflux_models import _wire_progress
+from .mflux_common import _apply_memory_policy, _wire_progress
 
 # variant id -> (mflux model_path, quantize).
 # 4-bit: a ready pre-quantized repo (no on-the-fly quantization, light download, 16 GB-friendly).
@@ -95,15 +95,21 @@ class ZImageTurboBackend(Backend):
             self._variant = variant
         return self._model
 
+    def will_load(self, variant):
+        return self._model is None or self._variant != variant
+
     def generate(self, *, prompt, variant, params, step_callback):
         model = self._get(variant)
-        _wire_progress(model, step_callback)
+        w, h = int(params.get("width", 1024)), int(params.get("height", 1024))
+        _apply_memory_policy(model, w, h)
+        n = int(params.get("num_images", 1))
         out = []
-        for i in range(int(params.get("num_images", 1))):
+        for i in range(n):
+            _wire_progress(model, step_callback, base=i, batches=n)
             img = model.generate_image(
                 seed=int(params.get("seed", 0)) + i, prompt=prompt,
                 num_inference_steps=int(params.get("steps", 9)),
-                height=int(params.get("height", 1024)), width=int(params.get("width", 1024)),
+                height=h, width=w,
                 guidance=0.0,   # turbo is distilled (supports_guidance=False); mflux forces 0 anyway
             )
             out.append(img.image)

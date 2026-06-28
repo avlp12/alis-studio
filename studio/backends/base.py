@@ -43,6 +43,14 @@ class Backend:
         per denoising step so the UI can show live progress."""
         raise NotImplementedError
 
+    def will_load(self, variant: str) -> bool:
+        """True if the next generate() will construct/load this variant's model into memory (it isn't
+        the one already cached on this backend) — a multi-second wait the UI should explain. The very
+        first time a model is used it also downloads its weights; later loads come from disk cache.
+        Safe to consult off the GPU thread: generation is single-flight (serialized under _LOCK + the
+        one GPU thread), so the state can't change before _get() runs. Default False (no load step)."""
+        return False
+
     # --- model management (override for downloadable backends) ---
     def is_installed(self, variant: str) -> bool:
         return True

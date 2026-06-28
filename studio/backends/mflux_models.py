@@ -9,39 +9,9 @@ by contrast, ships explicit download management (it uses our own HTTP-bridge dow
 from __future__ import annotations
 
 from .base import Backend
+from .mflux_common import _apply_memory_policy, _wire_progress
 
 _QUANT = {"8bit": 8, "4bit": 4, "bf16": None}
-
-
-class _StepProgress:
-    """Bridges mflux's per-step callback to Alis Studio's step_callback(step, total).
-
-    Registered on an mflux model's callback registry, it fires once per denoise step so the
-    UI can show a live progress bar — and, because step_callback raises when the user clicks
-    Stop, it also lets a generation be interrupted mid-loop instead of only after it finishes.
-    The Stop signal (server._Cancelled) is a plain Exception, NOT a KeyboardInterrupt, so it
-    escapes mflux's `except KeyboardInterrupt` denoise loop and surfaces as a cancel — don't
-    change _Cancelled to subclass KeyboardInterrupt or Stop becomes a silently-completed run.
-    """
-
-    def __init__(self, step_callback):
-        self._cb = step_callback
-
-    def call_in_loop(self, *, t, seed, prompt, latents, config, time_steps):
-        total = getattr(config, "num_inference_steps", 0) or len(time_steps)
-        self._cb(t + 1, total)
-
-
-def _wire_progress(model, step_callback):
-    """Attach a single per-step progress callback to an mflux model, replacing any previous one
-    (the model is cached across generations, so we must not stack subscribers). Best-effort:
-    progress is a nicety, so a change in mflux internals must never break generation — but leave
-    a trace, since a silent failure would degrade Stop to job-boundary granularity."""
-    try:
-        model.callbacks.in_loop = [_StepProgress(step_callback)]
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("mflux progress/Stop wiring failed: %s", e)
 
 
 def _flux_params(*, default_steps, max_steps, guidance_default, guidance_fixed, negative):
@@ -103,16 +73,22 @@ class _MfluxFlux(Backend):
             self._variant = variant
         return self._model
 
+    def will_load(self, variant):
+        return self._model is None or self._variant != variant
+
     def generate(self, *, prompt, variant, params, step_callback):
         model = self._get(variant)
-        _wire_progress(model, step_callback)
+        w, h = int(params.get("width", 1024)), int(params.get("height", 1024))
+        _apply_memory_policy(model, w, h)
         neg = (params.get("negative") or "").strip() or None
+        n = int(params.get("num_images", 1))
         out = []
-        for i in range(int(params.get("num_images", 1))):
+        for i in range(n):
+            _wire_progress(model, step_callback, base=i, batches=n)
             img = model.generate_image(
                 seed=int(params.get("seed", 0)) + i, prompt=prompt,
                 num_inference_steps=int(params.get("steps", 4)),
-                height=int(params.get("height", 1024)), width=int(params.get("width", 1024)),
+                height=h, width=w,
                 guidance=float(params.get("guidance", 0) or 0), negative_prompt=neg,
             )
             out.append(img.image)
@@ -170,16 +146,22 @@ class QwenImageBackend(Backend):
             self._variant = variant
         return self._model
 
+    def will_load(self, variant):
+        return self._model is None or self._variant != variant
+
     def generate(self, *, prompt, variant, params, step_callback):
         model = self._get(variant)
-        _wire_progress(model, step_callback)
+        w, h = int(params.get("width", 1024)), int(params.get("height", 1024))
+        _apply_memory_policy(model, w, h)
         neg = (params.get("negative") or "").strip() or None
+        n = int(params.get("num_images", 1))
         out = []
-        for i in range(int(params.get("num_images", 1))):
+        for i in range(n):
+            _wire_progress(model, step_callback, base=i, batches=n)
             img = model.generate_image(
                 seed=int(params.get("seed", 0)) + i, prompt=prompt,
                 num_inference_steps=int(params.get("steps", 20)),
-                height=int(params.get("height", 1024)), width=int(params.get("width", 1024)),
+                height=h, width=w,
                 guidance=float(params.get("guidance", 4) or 4), negative_prompt=neg,
             )
             out.append(img.image)

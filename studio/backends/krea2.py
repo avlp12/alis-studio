@@ -55,6 +55,9 @@ class Krea2Backend(Backend):
         self._pipe = None
         self._variant = None
 
+    def will_load(self, variant: str) -> bool:
+        return self._pipe is None or self._variant != variant   # mirrors the reload check in _get
+
     def _get(self, variant: str):
         import gc
         import mlx.core as mx

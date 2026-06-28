@@ -294,6 +294,9 @@ class Handler(BaseHTTPRequestHandler):
                 t0 = time.time()
 
                 def _job():           # all MLX work (load, denoise, NSFW filter) on the one GPU thread
+                    if backend.will_load(variant):   # model not in memory → load (first ever use also downloads)
+                        safe_emit({"type": "status",
+                                   "message": f"Loading {backend.label}… (first use may download weights)"})
                     out = backend.generate(prompt=str(req.get("prompt", "")), variant=variant,
                                            params=params, step_callback=step)
                     if _CANCEL.is_set():  # stopped after the last step, or by a backend that doesn't tick

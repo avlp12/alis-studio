@@ -437,7 +437,8 @@ async function generate(){
   finally{aborter=null;setBusy(false);clearInterval(timer);progress.classList.remove("show");}
 }
 function handle(ev,p){
-  if(ev.type==="step"){barfill.style.width=Math.round(ev.step/ev.total*100)+"%";pstep.textContent="Generating · step "+ev.step+" / "+ev.total;}
+  if(ev.type==="status"){pstep.textContent=ev.message;}
+  else if(ev.type==="step"){barfill.style.width=Math.round(ev.step/ev.total*100)+"%";pstep.textContent="Generating · step "+ev.step+" / "+ev.total;}
   else if(ev.type==="done"){barfill.style.width="100%";ev.images.forEach((u,i)=>renderCard(u,p,ev.meta,i,ev.images.length));}
   else if(ev.type==="cancelled"){pstep.textContent="Stopped.";}
   else if(ev.type==="error"){showErr(ev.message||"Generation failed.");}

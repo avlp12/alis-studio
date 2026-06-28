@@ -8,6 +8,21 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.6.1] — 2026-06-29
+
+### Added
+- **Lower memory on small Macs**: the mflux models (Z-Image Turbo, Qwen-Image, FLUX) now use mflux's
+  VAE tiling for large (≥1024²) renders on ≤24 GB Macs, cutting Z-Image 4-bit's 1024² peak from
+  ~12.9 GB to ~8.5 GB with no visible quality change (verified across every supported resolution).
+  Smaller renders (≤768², which already fit) and big-RAM Macs keep the exact untiled decode; force it
+  on or off with `ALIS_VAE_TILING=1` / `0`.
+- A **"Loading…" status** now shows while a model is being loaded for the first time (and, on the very
+  first use, while it downloads its weights) — so the wait isn't a blank progress bar.
+
+### Changed
+- The progress bar now advances **cumulatively across a multi-image batch** instead of restarting at
+  step 1 for each image.
+
 ## [0.6.0] — 2026-06-28
 
 ### Added
