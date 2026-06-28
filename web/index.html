@@ -24,9 +24,10 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none}
+.scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 button{font-family:inherit;cursor:pointer}
-.top{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:0.5px solid var(--border);background:var(--surface-2);position:sticky;top:0;z-index:5}
+.top{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:0.5px solid var(--border);background:var(--surface-2);flex:none;z-index:5}
 .logo{width:26px;height:26px;border-radius:7px;background:var(--clay);display:flex;align-items:center;justify-content:center;color:var(--on-clay)}
 .logo svg{width:16px;height:16px}
 .brand{font-size:15px;font-weight:500;letter-spacing:-.01em}
@@ -79,6 +80,19 @@ input[type=range]{width:100%;accent-color:var(--clay)}
 .mbtns{display:flex;gap:8px;justify-content:flex-end}
 .mbtn{height:34px;padding:0 14px;border-radius:9px;border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500}
 .mbtn:hover{background:var(--surface-1)}.mbtn.primary{background:var(--clay);color:var(--on-clay);border-color:var(--clay)}.mbtn.primary:hover{background:var(--clay-hover)}
+.gbtn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:0.5px solid var(--border);border-radius:14px;background:var(--surface);font-size:13px;color:var(--text);cursor:pointer}
+.gbtn:hover{border-color:var(--border-strong)}.gbtn svg{width:15px;height:15px}
+.galv{max-width:920px;margin:0 auto;padding:18px 18px 70px}
+.galv h2{font-size:15px;font-weight:500;margin:0 0 14px}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.gcard{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface-2)}
+.gcard img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--surface-1)}
+.gcap{padding:9px 11px}
+.gcap .gp{font-size:12px;color:var(--text-2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:33px}
+.gcap .gm{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;display:flex;align-items:center;gap:9px}
+.gcap .gm .sp{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gact{color:var(--text-2);cursor:pointer;display:inline-flex;flex:none}.gact:hover{color:var(--text)}.gact svg{width:15px;height:15px}
+.gempty{text-align:center;color:var(--muted);font-size:14px;padding:50px 0}
 textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-height:1.4}
 .disabled{opacity:.5;pointer-events:none}
 .picker{position:relative}
@@ -122,9 +136,11 @@ textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-h
   <span class="brand">Alis Studio</span>
   <span class="ver" id="ver" title="Alis Studio v__ALIS_VERSION__">v__ALIS_VERSION__</span>
   <span style="flex:1"></span>
+  <button class="gbtn" id="galleryBtn" title="Gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Gallery</button>
   <span class="chip" id="activeChip" title="Active model"><span class="dot"></span><span id="activeName">—</span></span>
 </div>
 
+<div class="scroll">
 <div class="main">
   <div class="left">
     <div class="composer">
@@ -150,6 +166,13 @@ textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-h
   </div>
 </div>
 
+<div class="galv" id="galleryView" style="display:none">
+  <h2>Gallery</h2>
+  <div class="ggrid" id="ggrid"></div>
+  <div class="gempty" id="gempty" style="display:none">No images yet. What you generate is saved here automatically.</div>
+</div>
+</div>
+
 <div class="modal" id="modal"><div class="mbox"><h3 id="mtitle"></h3><p id="mtext"></p><div class="mbtns"><button class="mbtn" id="mcancel">Cancel</button><button class="mbtn primary" id="mok">Enable</button></div></div></div>
 
 <script>
@@ -158,7 +181,7 @@ const prompt=$("#prompt"),gen=$("#gen"),results=$("#results"),empty=$("#empty"),
 const progress=$("#progress"),barfill=$("#barfill"),pstep=$("#pstep"),ptime=$("#ptime");
 const modelGroup=$("#modelGroup"),paramGroups=$("#paramGroups"),activeName=$("#activeName"),safetyBtn=$("#safety");
 let BACKENDS=[],CATALOG={backends:[],disk_gb:0},PV={},current="",safetyOn=true,busy=false,t0=0,timer=null,aborter=null;
-let SYS={ram_gib:0,constrained:false,enhance_available:false,enhance_model:""},enhanceOn=false;
+let SYS={ram_gib:0,constrained:false,enhance_available:false,enhance_model:""},enhanceOn=false,galleryOn=false;
 const SVG_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
 const SVG_CUBE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>';
 const SVG_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
@@ -167,6 +190,9 @@ const SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const SVG_CHEVD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const SVG_GEN='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9z"/></svg>';
 const SVG_STOP='<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
+const SVG_GRID='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+const SVG_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9z" fill="currentColor" stroke="none"/></svg>';
+const SVG_REUSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
 const fmt=n=>(Math.round(n*10)/10).toFixed(1);
 const showErr=m=>{errBox.textContent=m;errBox.classList.add("show");};
 const m16=(x,min,max)=>Math.max(min,Math.min(max,Math.round(x/16)*16));
@@ -178,6 +204,40 @@ prompt.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="Enter"
 safetyBtn.addEventListener("click",()=>{safetyOn=!safetyOn;safetyBtn.classList.toggle("on",safetyOn);safetyBtn.title="NSFW safety filter: "+(safetyOn?"on":"off");});
 gen.addEventListener("click",()=>{busy?stopGen():generate();});
 $("#enhbtn").addEventListener("click",doEnhance);
+$("#galleryBtn").addEventListener("click",()=>toggleGallery());
+function toggleGallery(on){
+  galleryOn = (on===undefined)? !galleryOn : on;
+  document.querySelector(".main").style.display = galleryOn?"none":"flex";
+  $("#galleryView").style.display = galleryOn?"block":"none";
+  $("#galleryBtn").innerHTML = galleryOn ? (SVG_BACK+"Generate") : (SVG_GRID+"Gallery");
+  if(galleryOn) loadGallery();
+}
+async function loadGallery(){
+  try{ const d=await(await fetch("/api/gallery")).json(); renderGallery(d.items||[]); }
+  catch(e){ $("#ggrid").innerHTML=""; $("#gempty").style.display="block"; $("#gempty").textContent="Couldn't load gallery: "+e.message; }
+}
+function renderGallery(items){
+  const grid=$("#ggrid"); grid.innerHTML="";
+  $("#gempty").style.display = items.length?"none":"block";
+  items.forEach(it=>{
+    const card=el("div","gcard");
+    const meta=(it.model||"")+" · "+it.width+"×"+it.height+" · seed "+it.seed;
+    card.innerHTML='<img loading="lazy" src="/api/gallery/'+it.id+'.png" alt="">'
+      +'<div class="gcap"><div class="gp">'+(it.prompt||"").replace(/</g,"&lt;")+'</div>'
+      +'<div class="gm"><span class="sp" title="'+meta+'">'+meta+'</span>'
+      +'<span class="gact" data-a="use" title="Use this prompt">'+SVG_REUSE+'</span>'
+      +'<a class="gact" data-a="dl" title="Download">'+SVG_DL+'</a>'
+      +'<span class="gact" data-a="del" title="Delete">'+SVG_TRASH+'</span></div></div>';
+    card.querySelector('[data-a="use"]').onclick=()=>{prompt.value=it.prompt||"";prompt.dispatchEvent(new Event("input"));toggleGallery(false);};
+    card.querySelector('[data-a="dl"]').onclick=()=>{const a=document.createElement("a");a.href="/api/gallery/"+it.id+".png";a.download="alis_"+it.seed+".png";a.click();};
+    card.querySelector('[data-a="del"]').onclick=()=>delGallery(it.id);
+    grid.appendChild(card);
+  });
+}
+async function delGallery(id){
+  try{ await fetch("/api/gallery/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})}); }catch(e){}
+  loadGallery();
+}
 document.addEventListener("click",e=>{if(POPEN&&!e.target.closest(".picker")){POPEN=false;const p=document.querySelector(".mpop");if(p)p.classList.remove("open");}});
 
 async function loadAll(){
