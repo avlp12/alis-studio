@@ -106,6 +106,8 @@ textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-h
 .mpop{display:none;position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:30;max-height:330px;overflow:auto;background:var(--surface-2);border:0.5px solid var(--border-strong);border-radius:12px;padding:5px;box-shadow:0 10px 30px rgba(20,18,16,.18)}
 .mpop.open{display:block}
 .mpg{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:8px 9px 4px}
+.mprec{margin-left:7px;color:var(--clay);font-weight:600;font-size:10px;letter-spacing:0;text-transform:none}
+.mphint{font-size:11px;color:var(--muted);margin:7px 2px 0;line-height:1.4}.mphint b{color:var(--clay);font-weight:600}
 .mpr{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;flex-wrap:wrap}
 .mpr:hover{background:var(--surface-1)}
 .mpr.on{background:rgba(196,98,63,.10)}
@@ -242,15 +244,21 @@ document.addEventListener("click",e=>{if(POPEN&&!e.target.closest(".picker")){PO
 
 async function loadAll(){
   try{
-    const[m,c]=await Promise.all([fetch("/api/models").then(r=>r.json()),fetch("/api/catalog").then(r=>r.json())]);
-    BACKENDS=m.backends||[]; CATALOG=c||{backends:[],disk_gb:0};
+    const[m,c,s]=await Promise.all([
+      fetch("/api/models").then(r=>r.json()),
+      fetch("/api/catalog").then(r=>r.json()),
+      fetch("/api/system").then(r=>r.json()).catch(()=>({})),
+    ]);
+    BACKENDS=m.backends||[]; CATALOG=c||{backends:[],disk_gb:0}; SYS=s||{};
     if(!BACKENDS.length){showErr("No models available. Install a backend and restart.");return;}
-    const builds=allBuilds(); const first=builds.find(b=>b.installed)||builds[0];
-    if(!first){showErr("No model builds found.");return;}
-    setActive(first.backend+":"+first.variant,true);
+    const builds=allBuilds(), rec=SYS.recommended;
+    // start on the model recommended for this Mac (installed build preferred), else first installed
+    const pick=(rec&&(builds.find(b=>b.backend===rec&&b.installed)||builds.find(b=>b.backend===rec)))
+              ||builds.find(b=>b.installed)||builds[0];
+    if(!pick){showErr("No model builds found.");return;}
+    setActive(pick.backend+":"+pick.variant,true);
     reconcile();
   }catch(e){showErr("Couldn’t reach the server: "+e.message);}
-  try{SYS=await fetch("/api/system").then(r=>r.json());}catch(e){}
   try{enhanceOn=!!SYS.enhance_available&&localStorage.getItem("alis_enhance")==="1";}catch(e){}
   renderEnhance();
 }
@@ -327,9 +335,15 @@ function renderModelGroup(){
   const pop=el("div","mpop"+(POPEN?" open":""));
   const builds=allBuilds(),byB={};
   builds.forEach(b=>(byB[b.backend]=byB[b.backend]||[]).push(b));   // group builds under each model in the popover
-  Object.entries(byB).forEach(([bid,grp])=>{pop.appendChild(el("div","mpg",grp[0].blabel));grp.forEach(b=>pop.appendChild(popRow(b)));});
+  Object.entries(byB).forEach(([bid,grp])=>{
+    const gl=el("div","mpg",grp[0].blabel);
+    if(bid===SYS.recommended)gl.appendChild(el("span","mprec","★ Recommended"));   // best fit for this Mac's RAM
+    pop.appendChild(gl);grp.forEach(b=>pop.appendChild(popRow(b)));
+  });
   btn.onclick=e=>{e.stopPropagation();POPEN=!POPEN;pop.classList.toggle("open",POPEN);btn.setAttribute("aria-expanded",POPEN?"true":"false");};
   wrap.appendChild(btn);wrap.appendChild(pop);modelGroup.appendChild(wrap);
+  if(SYS.recommended&&SYS.recommended_label&&SYS.ram_gib)
+    modelGroup.appendChild(el("div","mphint","★ <b>"+SYS.recommended_label+"</b> — recommended for your "+SYS.ram_gib+" GB Mac"));
 }
 
 function popRow(b){

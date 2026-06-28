@@ -26,6 +26,7 @@ class Backend:
     variants: list[dict] = []    # selectable builds: [{"id": "8bit", "label": "8-bit · best quality"}]
     params: list[dict] = []      # settings schema (see module docstring)
     catalog: list[dict] = []     # downloadable builds (see studio/registry conventions); empty = managed elsewhere
+    min_ram_gib = 0              # unified-memory floor to run this model acceptably; drives the "recommended for your Mac" hint
 
     @classmethod
     def is_available(cls) -> bool:

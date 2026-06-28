@@ -112,14 +112,35 @@ def _ram_gib() -> float:
     return _RAM_GIB
 
 
+# Quality-preference order for the "recommended for your Mac" hint: flagship first. The pick is the
+# first of these that's installed AND whose RAM floor (Backend.min_ram_gib) this machine clears.
+_RECOMMEND_ORDER = ["krea2-turbo", "qwen-image", "flux-dev", "z-image-turbo", "flux-schnell"]
+
+
+def _recommended_model(ram: float):
+    """The most capable model that fits this Mac's RAM (by _RECOMMEND_ORDER), falling back to the
+    lightest available model if nothing's floor is met. Returns (id, label); ('', '') if no models."""
+    backs = _registry().backends
+    for bid in _RECOMMEND_ORDER:
+        b = backs.get(bid)
+        if b is not None and getattr(b, "min_ram_gib", 0) <= ram:
+            return b.id, b.label
+    if backs:
+        b = min(backs.values(), key=lambda x: getattr(x, "min_ram_gib", 0))
+        return b.id, b.label
+    return "", ""
+
+
 def _system() -> dict:
-    """Capabilities the UI needs to gate the optional prompt enhancer."""
+    """Capabilities the UI needs: gate the optional prompt enhancer, and recommend a model for this Mac."""
     from . import prompt_rewrite
     ram = _ram_gib()
+    rec_id, rec_label = _recommended_model(ram)
     return {"ram_gib": round(ram, 1),
             "constrained": 0 < ram <= ENHANCE_RAM_GIB,
             "enhance_available": prompt_rewrite.is_available(),
-            "enhance_model": prompt_rewrite.MODEL}
+            "enhance_model": prompt_rewrite.MODEL,
+            "recommended": rec_id, "recommended_label": rec_label}
 
 
 def _catalog() -> dict:

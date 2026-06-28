@@ -33,6 +33,7 @@ class ZImageTurboBackend(Backend):
 
     id = "z-image-turbo"
     label = "Z-Image Turbo"
+    min_ram_gib = 16   # 4-bit pipeline ~6 GB resident; 1024² peaks ~8.5 GB with VAE tiling → runs on 16 GB
     prompt_note = "Understands Korean and other languages natively (Qwen3 text encoder). Distilled — fast at ~9 steps."
     info = "Apache-2.0 (open) · 4-bit runs on a 16 GB Mac (best at 512–768px) · downloads on first use via mflux"
     # 4-bit is listed first on purpose: it is the default (variants[0]) and the only 16 GB-friendly build.
