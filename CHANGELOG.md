@@ -8,6 +8,20 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.6.0] — 2026-06-28
+
+### Added
+- **Z-Image-Turbo model** (Tongyi-MAI / Alibaba, Apache-2.0): a ~6B single-stream DiT with a
+  Qwen3-4B text encoder (understands Korean and other languages natively) and the FLUX VAE,
+  distilled to ~9 steps with no CFG. At **4-bit (~6 GB) it runs on a 16 GB Mac** (comfortable at
+  512–768px; 1024px is tight) — the first backend that doesn't effectively need a big-RAM machine
+  the way the 12.9B Krea 2 Turbo default does. Powered by mflux (no model port), it downloads on
+  first use: the 4-bit pre-quantized build (~6 GB) by default, or 8-bit/bf16 (~33 GB) from the
+  official repo. Adds `mflux>=0.18` as a direct dependency.
+- **Live progress bar + responsive Stop for the mflux backends** (Z-Image, Qwen-Image, FLUX):
+  generation now reports each denoising step to the UI, and the Stop button interrupts
+  mid-generation instead of only taking effect after the current image finishes.
+
 ## [0.5.4] — 2026-06-28
 
 ### Added

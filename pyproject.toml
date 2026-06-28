@@ -18,9 +18,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Multimedia :: Graphics",
 ]
-# The app itself is pure standard library. The default Krea 2 Turbo backend is pulled from GitHub:
+# The app itself is pure standard library. The default Krea 2 Turbo backend is pulled from GitHub;
+# mflux powers the Z-Image / FLUX / Qwen-Image backends (>=0.18 ships the Z-Image MLX model).
 dependencies = [
     "krea2-alis-mlx @ git+https://github.com/avlp12/krea2_alis_mlx.git",
+    "mflux>=0.18,<0.19",
 ]
 
 [project.optional-dependencies]
