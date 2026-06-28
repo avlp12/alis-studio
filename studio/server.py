@@ -136,6 +136,42 @@ def _catalog() -> dict:
     return {"disk_gb": disk, "backends": backs}
 
 
+def _gallery_dir() -> str:
+    d = os.path.join(os.path.expanduser("~/Library/Application Support/Alis Studio"), "gallery")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _safe_id(gid: str) -> bool:
+    return bool(gid) and all(c.isalnum() or c in "-_" for c in gid)
+
+
+def _gallery_save(images, prompt, meta) -> None:
+    """Persist each generated image + its metadata to the on-disk gallery (best-effort)."""
+    d = _gallery_dir()
+    base = int(time.time() * 1000)
+    for i, im in enumerate(images):
+        gid = f"{base}-{int(meta.get('seed', 0))}-{i}"
+        im.save(os.path.join(d, gid + ".png"))
+        with open(os.path.join(d, gid + ".json"), "w") as f:
+            json.dump({"id": gid, "prompt": prompt, "ts": base, **meta}, f)
+
+
+def _gallery_list() -> list:
+    """All saved generations, newest first."""
+    d = _gallery_dir()
+    items = []
+    for fn in os.listdir(d):
+        if fn.endswith(".json"):
+            try:
+                with open(os.path.join(d, fn)) as f:
+                    items.append(json.load(f))
+            except Exception:
+                pass
+    items.sort(key=lambda r: r.get("ts", 0), reverse=True)
+    return items
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -166,6 +202,18 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "application/json", json.dumps({"backends": _registry().models()}).encode())
         elif path == "/api/catalog":
             self._send(200, "application/json", json.dumps(_catalog()).encode())
+        elif path == "/api/gallery":
+            self._send(200, "application/json", json.dumps({"items": _gallery_list()}).encode())
+        elif path.startswith("/api/gallery/") and path.endswith(".png"):
+            gid = path[len("/api/gallery/"):-4]
+            if _safe_id(gid):
+                try:
+                    with open(os.path.join(_gallery_dir(), gid + ".png"), "rb") as f:
+                        self._send(200, "image/png", f.read())
+                except OSError:
+                    self._send(404, "text/plain", b"not found")
+            else:
+                self._send(404, "text/plain", b"not found")
         elif path == "/favicon.ico":
             self._send(204, "text/plain")
         else:
@@ -187,7 +235,7 @@ class Handler(BaseHTTPRequestHandler):
             _CANCEL.set()
             self._send(200, "application/json", b'{"ok":true}')
             return
-        if self.path not in ("/api/generate", "/api/download", "/api/delete", "/api/enhance"):
+        if self.path not in ("/api/generate", "/api/download", "/api/delete", "/api/enhance", "/api/gallery/delete"):
             self._send(404, "text/plain", b"not found")
             return
         try:
@@ -202,8 +250,23 @@ class Handler(BaseHTTPRequestHandler):
             self._enhance(req)
         elif self.path == "/api/download":
             self._download(req)
+        elif self.path == "/api/gallery/delete":
+            self._gallery_delete(req)
         else:
             self._delete(req)
+
+    def _gallery_delete(self, req):
+        gid = str(req.get("id", ""))
+        if not _safe_id(gid):
+            self._send(400, "application/json", b'{"ok":false}')
+            return
+        d = _gallery_dir()
+        for ext in (".png", ".json"):
+            try:
+                os.remove(os.path.join(d, gid + ext))
+            except OSError:
+                pass
+        self._send(200, "application/json", b'{"ok":true}')
 
     def _generate(self, req):
         emit = self._stream()
@@ -238,11 +301,15 @@ class Handler(BaseHTTPRequestHandler):
                     return _apply_safety(out, req.get("safety", True))
 
                 imgs, flagged = _gpu(_job)
+                meta = {"model": backend.label, "width": w, "height": h,
+                        "steps": int(params.get("steps", 8)), "seed": int(params.get("seed", 0)),
+                        "seconds": round(time.time() - t0, 1)}
+                try:
+                    _gallery_save(imgs, str(req.get("prompt", "")), meta)   # best-effort history
+                except Exception:
+                    pass
                 emit({"type": "done", "flagged": flagged,
-                      "images": [_png_datauri(im) for im in imgs],
-                      "meta": {"model": backend.label, "width": w, "height": h,
-                               "steps": int(params.get("steps", 8)), "seed": int(params.get("seed", 0)),
-                               "seconds": round(time.time() - t0, 1)}})
+                      "images": [_png_datauri(im) for im in imgs], "meta": meta})
             except _Cancelled:
                 safe_emit({"type": "cancelled"})
             except (BrokenPipeError, ConnectionResetError):

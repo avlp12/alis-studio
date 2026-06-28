@@ -8,6 +8,19 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.5.4] — 2026-06-28
+
+### Added
+- **Gallery**: generated images are now saved to disk (`~/Library/Application Support/Alis Studio/
+  gallery/`) with their prompt and settings, and a new **Gallery** view (top-bar toggle) shows your
+  past work as a grid — reuse a prompt, download, or delete each one. Adds `GET /api/gallery`,
+  `GET /api/gallery/<id>.png`, and `POST /api/gallery/delete`. (History starts now — images from
+  earlier sessions weren't persisted.)
+
+### Fixed
+- Scrolling no longer rubber-bands the whole window into blank space (WKWebView elastic overscroll).
+  The header is now a fixed bar and only the content area scrolls.
+
 ## [0.5.3] — 2026-06-28
 
 ### Changed
@@ -88,6 +101,7 @@ web UI, and the DMG build stamps it into the app bundle.
 - Initial release: a local, model-agnostic, standard-library image-generation studio for
   Apple silicon (MLX), with the pure-MLX Krea 2 Turbo backend.
 
+[0.5.4]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.4
 [0.5.3]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.3
 [0.5.2]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.2
 [0.5.1]: https://github.com/avlp12/alis-studio/releases/tag/v0.5.1
