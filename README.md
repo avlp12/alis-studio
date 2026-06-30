@@ -96,7 +96,7 @@ downloads inline, and the previous build is freed when you switch (two big model
 |---|---|---|
 | **Krea 2 Turbo** | 8-bit (14.2 GB) · mixed-4/8 (9.8 GB). 8-step Turbo. Wants ≥ 24 GB RAM. | managed in-app (resumable, with progress) |
 | **Z-Image Turbo** | 4-bit (~6 GB) · 8-bit · bf16. 9-step Turbo, Apache-2.0. **Runs on 16 GB**; multilingual (Qwen3 encoder). | auto on first use via mflux |
-| **Qwen-Image** | 8/4-bit, bf16. Apache-2.0, open. | auto on first use via mflux (~40 GB) |
+| **Qwen-Image** | 8-bit, bf16. Apache-2.0, open. (No 4-bit — its ~20B transformer gets grainy below 8-bit.) | auto on first use via mflux (~40 GB) |
 | **FLUX.1 schnell** | 8/4-bit, bf16. Apache-2.0 weights, **gated repo**. | auto on first use via mflux (~24 GB) |
 | **FLUX.1 dev** | 8/4-bit, bf16. Non-commercial, **gated**. | auto on first use via mflux (~24 GB) |
 
