@@ -12,6 +12,8 @@ and register it in `studio/registry.py`. The web UI discovers everything via `/a
   - "select": {options:[{value,label}], default}
   - "seed": {default}                      (number + randomize + lock)
   - "text": {default}
+  - "image": {}                            drop-zone upload → data URI in params[key]; the server
+                                           decodes it to params["image_path"] for img2img backends
 Flags: "fixed": shown read-only; "enabled": False shown disabled; "hint": one-line note.
 """
 

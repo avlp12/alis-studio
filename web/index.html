@@ -65,6 +65,11 @@ input[type=range]{width:100%;accent-color:var(--clay)}
 .sq{width:32px;height:32px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;flex:none}.sq:hover{border-color:var(--border-strong)}.sq svg{width:16px;height:16px}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
 .rwarn{font-size:11px;color:var(--clay);margin-top:6px;line-height:1.4;display:none}.rwarn.show{display:block}
+.imgdrop{border:1.5px dashed var(--muted);border-radius:10px;min-height:92px;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;background:var(--surface-1)}
+.imgdrop.over{border-color:var(--clay);background:var(--surface-2)}
+.idph{font-size:12px;color:var(--muted);padding:16px;text-align:center}
+.ithumb{max-width:100%;max-height:220px;display:block}
+.irm{position:absolute;top:6px;right:6px;width:22px;height:22px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .phint{font-size:12px;color:var(--muted);margin:7px 2px 0;line-height:1.4}.phint:empty{display:none}
 .enhbtn{height:34px;padding:0 12px;border:0.5px solid var(--border-strong);border-radius:17px;background:var(--surface);color:var(--text);font-size:13px;display:none;align-items:center;gap:6px}
 .enhbtn.show{display:inline-flex}.enhbtn:hover{background:var(--surface-1)}.enhbtn:disabled{opacity:.55}.enhbtn svg{width:15px;height:15px}
@@ -409,6 +414,23 @@ function control(p){
     sel.onchange=()=>{base=+sel.value;apply();};c.appendChild(sel);
     const aw=el("div","aspects");p.aspects.forEach(a=>{const t=el("div","ap"+(a===asp?" on":""),a);t.onclick=()=>{asp=a;[...aw.children].forEach(x=>x.classList.remove("on"));t.classList.add("on");apply();};aw.appendChild(t);});
     c.appendChild(aw);const warn=el("div","rwarn");c.appendChild(warn);const dim=c.querySelector("#dimout");apply();return c;
+  }
+  if(p.type==="image"){
+    PV[p.key]=null;
+    c.appendChild(el("div","lab","<span>"+p.label+"</span>"));
+    const drop=el("div","imgdrop");
+    const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.style.display="none";
+    const set=(uri)=>{PV[p.key]=uri||null;
+      if(uri){drop.innerHTML="<img class='ithumb' alt='input'><button class='irm' aria-label='Remove'>×</button>";drop.querySelector(".ithumb").src=uri;drop.querySelector(".irm").onclick=e=>{e.stopPropagation();set(null);};}
+      else{drop.innerHTML="<span class='idph'>Drop an image or click to browse</span>";}};
+    const read=f=>{if(f&&f.type&&f.type.indexOf("image/")===0){const fr=new FileReader();fr.onload=()=>set(fr.result);fr.readAsDataURL(f);}};
+    set(null);
+    drop.onclick=()=>inp.click();
+    inp.onchange=()=>read(inp.files[0]);
+    drop.ondragover=e=>{e.preventDefault();drop.classList.add("over");};
+    drop.ondragleave=()=>drop.classList.remove("over");
+    drop.ondrop=e=>{e.preventDefault();drop.classList.remove("over");read(e.dataTransfer.files[0]);};
+    c.appendChild(drop);c.appendChild(inp);if(p.hint)c.appendChild(el("div","hint",p.hint));return c;
   }
   if(p.type==="int"||p.type==="float"){
     const step=p.step||(p.type==="float"?0.1:1);PV[p.key]=p.default;

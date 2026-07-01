@@ -78,6 +78,25 @@ def _apply_safety(images, enabled):
         return list(images), 0
 
 
+def _stash_input_image(params):
+    """For img2img: if the request carries an uploaded image (data URI in params['init_image']),
+    decode it to a temp PNG and set params['image_path'] (what mflux's generate_image expects).
+    Returns the temp path to clean up later, or None for plain txt2img."""
+    data_uri = params.pop("init_image", None)
+    if not isinstance(data_uri, str) or not data_uri.startswith("data:"):
+        return None
+    try:
+        import tempfile
+        raw = base64.b64decode(data_uri.split(",", 1)[1])
+        fd, path = tempfile.mkstemp(prefix="alis_in_", suffix=".png")
+        with os.fdopen(fd, "wb") as f:
+            f.write(raw)
+        params["image_path"] = path
+        return path
+    except Exception:
+        return None
+
+
 def _disk_gb() -> float:
     """Total size of the local model cache, in GB."""
     from krea2.pipeline import _CACHE
@@ -300,6 +319,7 @@ class Handler(BaseHTTPRequestHandler):
 
         with _LOCK:
             _CANCEL.clear()           # fresh generation — forget any earlier Stop request
+            img_tmp = None            # temp file for an uploaded img2img input; removed in finally
 
             def step(s, total):       # called once per denoise step; the Stop hook lives here
                 if _CANCEL.is_set():
@@ -312,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                 w = int(params.get("width") or params.get("size") or 1024)
                 h = int(params.get("height") or params.get("size") or 1024)
                 params["width"], params["height"] = w, h
+                img_tmp = _stash_input_image(params)   # img2img: decode uploaded image → params["image_path"]
                 t0 = time.time()
 
                 def _job():           # all MLX work (load, denoise, NSFW filter) on the one GPU thread
@@ -350,6 +371,12 @@ class Handler(BaseHTTPRequestHandler):
                                "images, or a lighter model build."})
                 else:
                     safe_emit({"type": "error", "message": f"Generation failed: {e}"})
+            finally:
+                if img_tmp:
+                    try:
+                        os.remove(img_tmp)
+                    except OSError:
+                        pass
 
     def _enhance(self, req):
         from . import prompt_rewrite

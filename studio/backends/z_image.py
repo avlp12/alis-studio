@@ -16,7 +16,7 @@ builds quantize on the fly from the official ``Tongyi-MAI/Z-Image-Turbo`` repo (
 from __future__ import annotations
 
 from .base import Backend
-from .mflux_common import _apply_memory_policy, _wire_progress
+from .mflux_common import _apply_memory_policy, _img2img_args, _img2img_params, _wire_progress
 
 # variant id -> (mflux model_path, quantize).
 # 4-bit: a ready pre-quantized repo (no on-the-fly quantization, light download, 16 GB-friendly).
@@ -57,6 +57,7 @@ class ZImageTurboBackend(Backend):
         {"key": "negative", "label": "Negative prompt", "type": "text", "group": "Advanced",
          "default": "", "enabled": False,
          "hint": "Turbo runs without guidance, so a negative prompt has no effect."},
+        *_img2img_params(),
     ]
 
     @classmethod
@@ -103,6 +104,7 @@ class ZImageTurboBackend(Backend):
         model = self._get(variant)
         w, h = int(params.get("width", 1024)), int(params.get("height", 1024))
         _apply_memory_policy(model, w, h)
+        img_path, strength = _img2img_args(params)
         n = int(params.get("num_images", 1))
         out = []
         for i in range(n):
@@ -112,6 +114,7 @@ class ZImageTurboBackend(Backend):
                 num_inference_steps=int(params.get("steps", 9)),
                 height=h, width=w,
                 guidance=0.0,   # turbo is distilled (supports_guidance=False); mflux forces 0 anyway
+                image_path=img_path, image_strength=strength,
             )
             out.append(img.image)
         return out

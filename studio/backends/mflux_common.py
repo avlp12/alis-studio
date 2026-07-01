@@ -100,3 +100,30 @@ def _wire_progress(model, step_callback, base=0, batches=1) -> None:
         model.callbacks.in_loop = [_StepProgress(step_callback, base, batches)]
     except Exception as e:
         _log.warning("mflux progress/Stop wiring failed: %s", e)
+
+
+# --- image-to-image (shared by every mflux backend; mflux's generate_image takes image_path/strength) ---
+def _img2img_params():
+    """Optional input-image + strength controls. The UI renders type 'image' as a drop zone and
+    puts the picked image (data URI) in params['init_image']; the server decodes it to a temp file
+    and sets params['image_path'] before generate()."""
+    return [
+        {"key": "init_image", "label": "Input image", "type": "image", "group": "Image-to-image",
+         "hint": "Optional — attach an image to transform it with your prompt (img2img)."},
+        {"key": "strength", "label": "Strength", "type": "float", "group": "Image-to-image",
+         "min": 0.1, "max": 1.0, "step": 0.05, "default": 0.6,
+         "hint": "How much to change the input — higher = more change. Used only with an input image."},
+    ]
+
+
+def _img2img_args(params):
+    """Resolve (image_path, image_strength) for a generate_image() call from params; (None, None)
+    means plain txt2img. image_path is set by the server after decoding the uploaded image."""
+    path = params.get("image_path")
+    if not path:
+        return None, None
+    try:
+        strength = float(params.get("strength", 0.6))
+    except (TypeError, ValueError):
+        strength = 0.6
+    return path, strength
