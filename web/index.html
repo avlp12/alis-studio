@@ -116,6 +116,10 @@ input[type=range]{width:100%;accent-color:var(--clay)}
 .iconbtn.primary:hover{background:var(--clay-hover);color:var(--on-clay)}
 .iconbtn.danger:hover{color:#fff;background:#c0493b;border-color:#c0493b}
 .lbacts .grow{flex:1}
+.lbup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{padding:5px 12px;border:1px solid var(--muted);border-radius:16px;background:transparent;color:var(--text-2);cursor:pointer;font-size:12px}
+.pill:hover{color:var(--text);border-color:var(--text-2)}.pill:disabled{opacity:.5;cursor:default}
+.lbupst{font-size:11px;color:var(--muted);flex:1;min-width:80px}
 .lbx{position:absolute;top:8px;right:8px;width:28px;height:28px;border:none;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:18px;line-height:1;cursor:pointer;z-index:1;display:flex;align-items:center;justify-content:center}
 @media(max-width:760px){.lbox{flex-direction:column;max-height:92vh}.lbox>img{max-width:100%;max-height:50vh}.lbside{width:auto;padding:0;overflow-y:auto}}
 .gempty{text-align:center;color:var(--muted);font-size:14px;padding:50px 0}
@@ -202,7 +206,7 @@ textarea.fld{height:auto;min-height:54px;padding:8px 10px;resize:vertical;line-h
 </div>
 
 <div class="modal" id="modal"><div class="mbox"><h3 id="mtitle"></h3><p id="mtext"></p><div class="mbtns"><button class="mbtn" id="mcancel">Cancel</button><button class="mbtn primary" id="mok">Enable</button></div></div></div>
-<div class="lightbox" id="lightbox"><div class="lbox"><button class="lbx" id="lbClose" aria-label="Close">×</button><img id="lbImg" alt=""><div class="lbside"><label class="lblab" for="lbPrompt">Prompt · edit &amp; reuse</label><textarea class="lbprompt" id="lbPrompt" spellcheck="false"></textarea><div class="lbmeta" id="lbMeta"></div><div class="lbacts"><button class="iconbtn primary" id="lbUse" title="Use this prompt — send to the box &amp; generate" aria-label="Use prompt"></button><button class="iconbtn" id="lbCopy" title="Copy prompt" aria-label="Copy prompt"></button><button class="iconbtn" id="lbDl" title="Download image" aria-label="Download"></button><span class="grow"></span><button class="iconbtn danger" id="lbDel" title="Delete" aria-label="Delete"></button></div></div></div></div>
+<div class="lightbox" id="lightbox"><div class="lbox"><button class="lbx" id="lbClose" aria-label="Close">×</button><img id="lbImg" alt=""><div class="lbside"><label class="lblab" for="lbPrompt">Prompt · edit &amp; reuse</label><textarea class="lbprompt" id="lbPrompt" spellcheck="false"></textarea><div class="lbmeta" id="lbMeta"></div><div class="lbup" id="lbUpRow" style="display:none"><span class="lblab">Upscale</span><button class="pill" data-s="2">2×</button><button class="pill" data-s="3">3×</button><span class="lbupst" id="lbUpStatus"></span></div><div class="lbacts"><button class="iconbtn primary" id="lbUse" title="Use this prompt — send to the box &amp; generate" aria-label="Use prompt"></button><button class="iconbtn" id="lbCopy" title="Copy prompt" aria-label="Copy prompt"></button><button class="iconbtn" id="lbDl" title="Download image" aria-label="Download"></button><span class="grow"></span><button class="iconbtn danger" id="lbDel" title="Delete" aria-label="Delete"></button></div></div></div></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -284,6 +288,26 @@ function openLightbox(it){
   $("#lbCopy").onclick=e=>copyText($("#lbPrompt").value,e.currentTarget);
   $("#lbDl").onclick=()=>dlGalleryImg(it);
   $("#lbDel").onclick=()=>{lb.classList.remove("show");delGallery(it.id);};
+  const upRow=$("#lbUpRow"),upSt=$("#lbUpStatus");upSt.textContent="";
+  if(SYS.upscale_available){upRow.style.display="flex";
+    upRow.querySelectorAll(".pill").forEach(btn=>btn.onclick=()=>doUpscale({id:it.id},+btn.getAttribute("data-s"),it.prompt||""));
+  }else upRow.style.display="none";
+}
+async function doUpscale(payload,scale,origPrompt){
+  const st=$("#lbUpStatus"),pills=[...$("#lbUpRow").querySelectorAll(".pill")];
+  pills.forEach(b=>b.disabled=true);st.textContent="Starting…";errBox.classList.remove("show");
+  try{
+    const res=await fetch("/api/upscale",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...payload,scale,safety:safetyOn})});
+    if(!res.ok||!res.body)throw new Error("server "+res.status);
+    const reader=res.body.getReader(),dec=new TextDecoder();let buf="";
+    while(true){const{value,done}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let nl;
+      while((nl=buf.indexOf("\n"))>=0){const line=buf.slice(0,nl);buf=buf.slice(nl+1);if(!line.trim())continue;const ev=JSON.parse(line);
+        if(ev.type==="status")st.textContent=ev.message;
+        else if(ev.type==="error"){st.textContent="";showErr(ev.message);}
+        else if(ev.type==="done"){loadGallery();if(ev.id)openLightbox({id:ev.id,prompt:origPrompt,width:ev.meta.width,height:ev.meta.height,seed:0,steps:0,model:ev.meta.model});}
+      }}
+  }catch(e){st.textContent="";showErr("Upscale failed: "+e.message);}
+  finally{pills.forEach(b=>b.disabled=false);}
 }
 (function(){const lb=$("#lightbox");if(lb){
   $("#lbUse").innerHTML=SVG_REUSE;$("#lbCopy").innerHTML=SVG_COPY;$("#lbDl").innerHTML=SVG_DL;$("#lbDel").innerHTML=SVG_TRASH;

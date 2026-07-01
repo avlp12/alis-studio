@@ -61,6 +61,17 @@ def _registry() -> Registry:
     return _REGISTRY
 
 
+_UPSCALER = None
+
+
+def _upscaler():
+    global _UPSCALER
+    if _UPSCALER is None:
+        from .backends.upscale import Upscaler
+        _UPSCALER = Upscaler()
+    return _UPSCALER
+
+
 def _png_datauri(im) -> str:
     buf = io.BytesIO()
     im.save(buf, format="PNG")
@@ -153,13 +164,15 @@ def _recommended_model(ram: float):
 def _system() -> dict:
     """Capabilities the UI needs: gate the optional prompt enhancer, and recommend a model for this Mac."""
     from . import prompt_rewrite
+    from .backends.upscale import Upscaler
     ram = _ram_gib()
     rec_id, rec_label = _recommended_model(ram)
     return {"ram_gib": round(ram, 1),
             "constrained": 0 < ram <= ENHANCE_RAM_GIB,
             "enhance_available": prompt_rewrite.is_available(),
             "enhance_model": prompt_rewrite.MODEL,
-            "recommended": rec_id, "recommended_label": rec_label}
+            "recommended": rec_id, "recommended_label": rec_label,
+            "upscale_available": Upscaler.is_available()}
 
 
 def _catalog() -> dict:
@@ -195,6 +208,17 @@ def _gallery_save(images, prompt, meta) -> None:
         im.save(os.path.join(d, gid + ".png"))
         with open(os.path.join(d, gid + ".json"), "w") as f:
             json.dump({"id": gid, "prompt": prompt, "ts": base, **meta}, f)
+
+
+def _gallery_save_one(im, prompt, meta) -> str:
+    """Persist a single image + metadata to the gallery and return its id (used by upscale)."""
+    d = _gallery_dir()
+    ts = int(time.time() * 1000)
+    gid = f"{ts}-{int(meta.get('seed', 0))}-0"
+    im.save(os.path.join(d, gid + ".png"))
+    with open(os.path.join(d, gid + ".json"), "w") as f:
+        json.dump({"id": gid, "prompt": prompt, "ts": ts, **meta}, f)
+    return gid
 
 
 def _gallery_list() -> list:
@@ -275,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             _CANCEL.set()
             self._send(200, "application/json", b'{"ok":true}')
             return
-        if self.path not in ("/api/generate", "/api/download", "/api/delete", "/api/enhance", "/api/gallery/delete"):
+        if self.path not in ("/api/generate", "/api/upscale", "/api/download", "/api/delete", "/api/enhance", "/api/gallery/delete"):
             self._send(404, "text/plain", b"not found")
             return
         try:
@@ -286,6 +310,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/generate":
             self._generate(req)
+        elif self.path == "/api/upscale":
+            self._upscale(req)
         elif self.path == "/api/enhance":
             self._enhance(req)
         elif self.path == "/api/download":
@@ -375,6 +401,80 @@ class Handler(BaseHTTPRequestHandler):
                 if img_tmp:
                     try:
                         os.remove(img_tmp)
+                    except OSError:
+                        pass
+
+    def _upscale(self, req):
+        emit = self._stream()
+
+        def safe_emit(obj):
+            try:
+                emit(obj)
+            except OSError:
+                pass
+
+        scale = 3 if int(req.get("scale", 2) or 2) == 3 else 2
+        # resolve the source image to a local path: a gallery id, or an uploaded data URI
+        src_path, src_tmp, orig_prompt = None, None, str(req.get("prompt", "") or "")
+        gid = str(req.get("id", ""))
+        if gid and _safe_id(gid):
+            p = os.path.join(_gallery_dir(), gid + ".png")
+            if os.path.exists(p):
+                src_path = p
+                try:
+                    with open(os.path.join(_gallery_dir(), gid + ".json")) as f:
+                        orig_prompt = json.load(f).get("prompt", orig_prompt)
+                except Exception:
+                    pass
+        if src_path is None:
+            data_uri = req.get("image")
+            if isinstance(data_uri, str) and data_uri.startswith("data:"):
+                try:
+                    import base64
+                    import tempfile
+                    raw = base64.b64decode(data_uri.split(",", 1)[1])
+                    fd, src_tmp = tempfile.mkstemp(prefix="alis_up_", suffix=".png")
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(raw)
+                    src_path = src_tmp
+                except Exception:
+                    src_path = None
+        if not src_path:
+            safe_emit({"type": "error", "message": "No image to upscale."})
+            return
+
+        up = _upscaler()
+        with _LOCK:
+            t0 = time.time()
+            try:
+                def _job():
+                    if up.will_load():
+                        safe_emit({"type": "status", "message": "Loading the SeedVR2 upscaler… (first use downloads it)"})
+                    safe_emit({"type": "status", "message": f"Upscaling {scale}×…"})
+                    return _apply_safety([up.upscale(src_path, scale)], req.get("safety", True))
+
+                imgs, flagged = _gpu(_job)
+                im = imgs[0]
+                meta = {"model": f"SeedVR2 · {scale}× upscale", "width": im.width, "height": im.height,
+                        "steps": 0, "seed": 0, "seconds": round(time.time() - t0, 1)}
+                newid = None
+                try:
+                    newid = _gallery_save_one(im, orig_prompt, meta)
+                except Exception:
+                    pass
+                emit({"type": "done", "flagged": flagged, "image": _png_datauri(im), "id": newid, "meta": meta})
+            except (BrokenPipeError, ConnectionResetError):
+                return
+            except Exception as e:
+                m = str(e).lower()
+                if any(k in m for k in ("memory", "alloc", "metal")):
+                    safe_emit({"type": "error", "message": "Out of memory upscaling — try 2× instead of 3×, or a smaller image."})
+                else:
+                    safe_emit({"type": "error", "message": f"Upscale failed: {e}"})
+            finally:
+                if src_tmp:
+                    try:
+                        os.remove(src_tmp)
                     except OSError:
                         pass
 
