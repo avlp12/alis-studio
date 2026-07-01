@@ -14,12 +14,13 @@ from .mflux_common import _apply_memory_policy, _wire_progress
 _QUANT = {"8bit": 8, "4bit": 4, "bf16": None}
 
 
-def _flux_params(*, default_steps, max_steps, guidance_default, guidance_fixed, negative):
+def _flux_params(*, default_steps, max_steps, guidance_default, guidance_fixed, negative,
+                 sizes=(512, 768, 1024, 1280), max_res=1536):
     return [
         {"key": "resolution", "label": "Resolution", "type": "resolution", "group": "Output",
-         "sizes": [512, 768, 1024], "default_size": 1024,
+         "sizes": list(sizes), "default_size": 1024,
          "aspects": ["1:1", "3:2", "2:3", "16:9", "9:16"], "default_aspect": "1:1",
-         "min": 256, "max": 1536, "multiple": 16},
+         "min": 256, "max": max_res, "multiple": 16},
         {"key": "steps", "label": "Steps", "type": "int", "group": "Output",
          "min": 1, "max": max_steps, "default": default_steps},
         {"key": "num_images", "label": "Images", "type": "int", "group": "Output", "min": 1, "max": 4, "default": 1},
@@ -125,7 +126,8 @@ class QwenImageBackend(Backend):
     # the AdaLN modulation + output projection → grainy/noisy output; mflux's own docs warn ≤6-bit
     # "degrades a lot more compared to Flux"). 8-bit is the floor for clean output. See issue #9.
     variants = [{"id": "8bit", "label": "8-bit"}, {"id": "bf16", "label": "bf16"}]
-    params = _flux_params(default_steps=20, max_steps=50, guidance_default=4.0, guidance_fixed=False, negative=True)
+    params = _flux_params(default_steps=20, max_steps=50, guidance_default=4.0, guidance_fixed=False, negative=True,
+                          sizes=(512, 768, 1024, 1280, 1536), max_res=1536)   # Qwen-Image native ~1328
 
     @classmethod
     def is_available(cls) -> bool:

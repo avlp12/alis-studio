@@ -64,6 +64,7 @@ input[type=range]{width:100%;accent-color:var(--clay)}
 .seedrow{display:flex;gap:6px}.seedrow input{flex:1}
 .sq{width:32px;height:32px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;flex:none}.sq:hover{border-color:var(--border-strong)}.sq svg{width:16px;height:16px}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
+.rwarn{font-size:11px;color:var(--clay);margin-top:6px;line-height:1.4;display:none}.rwarn.show{display:block}
 .phint{font-size:12px;color:var(--muted);margin:7px 2px 0;line-height:1.4}.phint:empty{display:none}
 .enhbtn{height:34px;padding:0 12px;border:0.5px solid var(--border-strong);border-radius:17px;background:var(--surface);color:var(--text);font-size:13px;display:none;align-items:center;gap:6px}
 .enhbtn.show{display:inline-flex}.enhbtn:hover{background:var(--surface-1)}.enhbtn:disabled{opacity:.55}.enhbtn svg{width:15px;height:15px}
@@ -391,16 +392,23 @@ function renderParams(b){
   for(const[g,ps]of Object.entries(groups)){paramGroups.appendChild(el("div","sgrp",g));ps.forEach(p=>paramGroups.appendChild(control(p)));}
 }
 
+// memory-aware high-res warning: what pixel budget is comfortable for this Mac's RAM
+function resWarn(px){
+  const ram=SYS.ram_gib||0; if(!ram) return "";
+  const cap = ram<=16 ? 1024*1024 : ram<=24 ? 1536*1536 : ram<=32 ? 2048*2048 : Infinity;
+  if(px>cap) return "⚠️ Large for a "+ram+" GB Mac — this may be slow or run out of memory. A smaller size is safer.";
+  return "";
+}
 function control(p){
   const c=el("div","ctl");
   if(p.type==="resolution"){
     PV.width=p.default_size;PV.height=p.default_size;let base=p.default_size,asp=p.default_aspect;
-    const apply=()=>{const[a,bb]=asp.split(":").map(Number);let w,h;if(a>=bb){w=base;h=base*bb/a;}else{h=base;w=base*a/bb;}PV.width=m16(w,p.min,p.max);PV.height=m16(h,p.min,p.max);dim.textContent=PV.width+" × "+PV.height;};
+    const apply=()=>{const[a,bb]=asp.split(":").map(Number);let w,h;if(a>=bb){w=base;h=base*bb/a;}else{h=base;w=base*a/bb;}PV.width=m16(w,p.min,p.max);PV.height=m16(h,p.min,p.max);dim.textContent=PV.width+" × "+PV.height;const wm=resWarn(PV.width*PV.height);warn.textContent=wm;warn.classList.toggle("show",!!wm);};
     c.appendChild(el("div","lab","<span>"+p.label+"</span><b id='dimout'></b>"));
     const sel=el("select","fld");p.sizes.forEach(s=>{const o=el("option",null,s+" px");o.value=s;if(s===base)o.selected=true;sel.appendChild(o);});
     sel.onchange=()=>{base=+sel.value;apply();};c.appendChild(sel);
     const aw=el("div","aspects");p.aspects.forEach(a=>{const t=el("div","ap"+(a===asp?" on":""),a);t.onclick=()=>{asp=a;[...aw.children].forEach(x=>x.classList.remove("on"));t.classList.add("on");apply();};aw.appendChild(t);});
-    c.appendChild(aw);const dim=c.querySelector("#dimout");apply();return c;
+    c.appendChild(aw);const warn=el("div","rwarn");c.appendChild(warn);const dim=c.querySelector("#dimout");apply();return c;
   }
   if(p.type==="int"||p.type==="float"){
     const step=p.step||(p.type==="float"?0.1:1);PV[p.key]=p.default;

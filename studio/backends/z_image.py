@@ -44,7 +44,7 @@ class ZImageTurboBackend(Backend):
     ]
     params = [
         {"key": "resolution", "label": "Resolution", "type": "resolution", "group": "Output",
-         "sizes": [512, 768, 1024], "default_size": 1024,
+         "sizes": [512, 768, 1024, 1280], "default_size": 1024,   # native 1024; usable to ~1280
          "aspects": ["1:1", "3:2", "2:3", "16:9", "9:16"], "default_aspect": "1:1",
          "min": 256, "max": 1536, "multiple": 16},
         {"key": "steps", "label": "Steps", "type": "int", "group": "Output",
