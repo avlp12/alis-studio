@@ -82,8 +82,9 @@ too large to ship inside a DMG.
   renders keep the exact decode. Override with `ALIS_VAE_TILING=1`/`0`.
 - **Bigger images** — per-model max resolution: Krea 2 Turbo up to **2048²** (a native 1K–2K model),
   Qwen-Image 1536², Z-Image / FLUX 1280². The picker warns when a size may not fit your Mac's memory.
-- **Image-to-image** — the mflux models (Z-Image / Qwen / FLUX) take an optional **Input image** +
-  **Strength**; attach a picture and transform it with your prompt. (Krea 2 Turbo is text-to-image only.)
+- **Image-to-image** — every generation model (**Krea 2 Turbo**, Z-Image, Qwen, FLUX) takes an
+  optional **Input image** + **Strength**; attach (or just paste) a picture and transform it with
+  your prompt.
 - **Instruction editing** — **Qwen-Image Edit** (Apache-2.0) follows an edit instruction ("make the
   hat red", understands Korean); the output keeps the input's aspect ratio, normalized to ~1 MP
   (≈1024²). Offered in 8-bit / bf16; it's a large model (~54 GB download, **≥ 64 GB** for 8-bit,

@@ -15,11 +15,15 @@ web UI, and the DMG build stamps it into the app bundle.
   an **Edit** button in the top bar opens a file picker, and you can **drag-drop** an image onto the
   editor or **paste (⌘V)** one from the clipboard anywhere in the app. If marks are already on the
   canvas, replacing the image asks first ("Replace the image?").
+- **Krea 2 Turbo learns img2img** — the flagship model now takes an **Input image + Strength** like
+  the rest: the picture is encoded with the sampler's own VAE and the rectified-flow schedule is
+  entered at the matching timestep (lower strength = fewer steps = faster). Via `krea2-alis-mlx`
+  0.2.0; picked up automatically by the DMG build.
 - **Paste routes to the right place** — with the editor open, a pasted image replaces the editing
   base; with it closed, it lands in the **Input image** (img2img) of the selected model and the drop
-  zone highlights; if the model is text-to-image-only (Krea 2 Turbo), it opens the editor instead.
-- The settings panel now **says why** the Input image control is missing on a text-to-image-only
-  model, and points to the models (Z-Image / Qwen-Image / FLUX) that accept one.
+  zone highlights; a text-to-image-only model would open the editor instead.
+- The settings panel now **says why** the Input image control would be missing on a
+  text-to-image-only model (none ship today — Krea 2 Turbo was the last, and it just learned).
 
 ## [0.7.3] — 2026-07-02
 
