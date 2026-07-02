@@ -8,6 +8,23 @@ The version lives in exactly one place — `studio/__version__` (in `studio/__in
 `pyproject.toml` reads it via `[tool.setuptools.dynamic]`, the server injects it into the
 web UI, and the DMG build stamps it into the app bundle.
 
+## [0.7.4] — 2026-07-02
+
+### Added
+- **Bring your own image** — the canvas editor now takes *your* pictures, not just generated ones:
+  an **Edit** button in the top bar opens a file picker, and you can **drag-drop** an image onto the
+  editor or **paste (⌘V)** one from the clipboard anywhere in the app. If marks are already on the
+  canvas, replacing the image asks first ("Replace the image?").
+- **Krea 2 Turbo learns img2img** — the flagship model now takes an **Input image + Strength** like
+  the rest: the picture is encoded with the sampler's own VAE and the rectified-flow schedule is
+  entered at the matching timestep (lower strength = fewer steps = faster). Via `krea2-alis-mlx`
+  0.2.0; picked up automatically by the DMG build.
+- **Paste routes to the right place** — with the editor open, a pasted image replaces the editing
+  base; with it closed, it lands in the **Input image** (img2img) of the selected model and the drop
+  zone highlights; a text-to-image-only model would open the editor instead.
+- The settings panel now **says why** the Input image control would be missing on a
+  text-to-image-only model (none ship today — Krea 2 Turbo was the last, and it just learned).
+
 ## [0.7.3] — 2026-07-02
 
 ### Added

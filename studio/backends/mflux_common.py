@@ -109,10 +109,13 @@ def _img2img_params():
     and sets params['image_path'] before generate()."""
     return [
         {"key": "init_image", "label": "Input image", "type": "image", "group": "Image-to-image",
-         "hint": "Optional — attach an image to transform it with your prompt (img2img)."},
+         "hint": "Optional — attach (or paste) an image to transform it with your prompt (img2img). "
+                 "It's scaled to the Resolution setting, so match the aspect ratio to avoid stretching."},
         {"key": "strength", "label": "Strength", "type": "float", "group": "Image-to-image",
          "min": 0.1, "max": 1.0, "step": 0.05, "default": 0.6,
-         "hint": "How much to change the input — higher = more change. Used only with an input image."},
+         "hint": "How much to change the input — higher = more change; lower also runs fewer steps "
+                 "(faster), and with few steps nearby values can land on the same step. 1.0 ignores "
+                 "the input entirely."},
     ]
 
 
