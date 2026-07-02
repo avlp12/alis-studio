@@ -106,10 +106,15 @@ def _datauri_to_temp(data_uri, prefix):
 
 def _stash_input_image(params):
     """For img2img: decode an uploaded image (data URI in params['init_image']) to a temp PNG and set
-    params['image_path'] (what mflux's generate_image expects). Returns the temp path, or None."""
-    path = _datauri_to_temp(params.pop("init_image", None), "alis_in_")
+    params['image_path'] (what the backends' generate expects). Returns the temp path, or None.
+    An attached image that fails to decode raises — silently generating WITHOUT the image the user
+    attached would be far more confusing than an error."""
+    value = params.pop("init_image", None)
+    path = _datauri_to_temp(value, "alis_in_")
     if path:
         params["image_path"] = path
+    elif value:
+        raise ValueError("Couldn't decode the attached image — remove it and attach it again.")
     return path
 
 

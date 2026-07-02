@@ -858,9 +858,9 @@ function control(p){
   }
   if(p.type==="int"||p.type==="float"){
     const step=p.step||(p.type==="float"?0.1:1);PV[p.key]=p.default;
-    c.appendChild(el("div","lab","<span>"+p.label+"</span><b class='vo'>"+(p.type==="float"?p.default.toFixed(1):p.default)+"</b>"));
+    c.appendChild(el("div","lab","<span>"+p.label+"</span><b class='vo'>"+(p.type==="float"?+p.default.toFixed(2):p.default)+"</b>"));
     const r=document.createElement("input");r.type="range";r.min=p.min;r.max=p.max;r.step=step;r.value=p.default;if(p.fixed)r.disabled=true;
-    r.oninput=()=>{const v=+r.value;PV[p.key]=v;c.querySelector(".vo").textContent=p.type==="float"?v.toFixed(1):v;};
+    r.oninput=()=>{const v=+r.value;PV[p.key]=v;c.querySelector(".vo").textContent=p.type==="float"?+v.toFixed(2):v;};
     c.appendChild(r);if(p.fixed)c.classList.add("disabled");if(p.hint)c.appendChild(el("div","hint",p.hint));return c;
   }
   if(p.type==="select"){

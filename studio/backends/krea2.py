@@ -77,16 +77,18 @@ class Krea2Backend(Backend):
         return self._pipe
 
     def generate(self, *, prompt, variant, params, step_callback):
-        pipe = self._get(variant)
         image_path, strength = _img2img_args(params)   # (None, None) = plain txt2img
         kwargs = {}
         if image_path:
             import inspect
-            if "init_image" not in inspect.signature(pipe.generate).parameters:  # pre-0.2 package
+            from krea2.pipeline import Krea2Pipeline
+            # capability check BEFORE _get — don't load 14 GB of weights just to fail on an old package
+            if "init_image" not in inspect.signature(Krea2Pipeline.generate).parameters:  # pre-0.2
                 raise ValueError("This build of krea2-alis-mlx predates img2img — update it with "
                                  "`pip install -U git+https://github.com/avlp12/krea2_alis_mlx` "
                                  "(or reinstall the app), or remove the input image.")
             kwargs = {"init_image": image_path, "strength": strength}
+        pipe = self._get(variant)
         return pipe.generate(
             prompt,
             width=int(params.get("width", params.get("size", 1024))),
